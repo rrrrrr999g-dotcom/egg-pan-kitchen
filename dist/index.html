@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#ffd98a" />
+  <title>蛋餅小廚神</title>
+  <style>
+    *{box-sizing:border-box} :root{--ink:#45362f;--cream:#fff8e9;--orange:#ff9d55;--green:#74b98b;--red:#ef6f61}
+    html,body{margin:0;height:100%;overflow:hidden;font-family:ui-rounded,"Noto Sans TC",system-ui,sans-serif;background:#ffd98a;color:var(--ink)}
+    #game{position:fixed;inset:0} canvas{display:block;width:100%;height:100%;touch-action:none}
+    .top{position:fixed;top:14px;left:14px;right:14px;display:grid;grid-template-columns:minmax(260px,390px) 1fr auto;gap:12px;align-items:start;pointer-events:none}
+    .card{background:rgba(255,248,233,.9);border:3px solid rgba(255,255,255,.8);box-shadow:0 10px 30px #9a5d2730;border-radius:22px;padding:13px 16px;backdrop-filter:blur(8px)}
+    .order{display:flex;gap:12px;align-items:center}.face{font-size:38px;width:55px;height:55px;border-radius:50%;display:grid;place-items:center;background:#ffe0a3}.order b{display:block;font-size:17px}.order p{margin:3px 0 0;font-size:14px;line-height:1.45}
+    .timer{justify-self:center;text-align:center;min-width:130px}.timer span{font-size:11px;letter-spacing:.14em}.timer strong{display:block;font-size:30px;line-height:1}
+    .status{min-width:160px}.status .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px}.bar{height:10px;border-radius:10px;background:#eadcc7;overflow:hidden}.bar i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ffe34d,#ff983e,#6d3c26);transition:width .2s}
+    .hint{position:fixed;left:50%;top:116px;transform:translateX(-50%);background:#4b3a32db;color:white;border-radius:999px;padding:8px 15px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}.hint.show{opacity:1;transform:translate(-50%,4px)}
+    .controls{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(760px,calc(100% - 24px));display:grid;grid-template-columns:1.2fr 2fr 1fr;gap:10px;align-items:stretch}
+    .panel{background:rgba(255,248,233,.94);border:3px solid #fff9;border-radius:24px;padding:10px;box-shadow:0 12px 30px #83552a30;display:flex;gap:8px;align-items:center;justify-content:center}
+    button{border:0;font:inherit;color:var(--ink);font-weight:800;cursor:pointer;min-height:48px;border-radius:16px;padding:8px 13px;background:#fff;box-shadow:0 5px 0 #dfcdb5;transition:.12s;touch-action:manipulation}button:hover{transform:translateY(-2px)}button:active{transform:translateY(3px);box-shadow:0 2px 0 #dfcdb5}button.active{background:#ffe07b;box-shadow:0 5px 0 #d7a83e}button:disabled{opacity:.45;cursor:not-allowed;transform:none}.serve{background:var(--green);color:white;box-shadow:0 5px 0 #43845c;font-size:17px}.serve:active{box-shadow:0 2px 0 #43845c}.heat{display:flex;flex-direction:column;gap:5px;width:100%}.heat label{font-size:12px;font-weight:800;display:flex;justify-content:space-between}.heat input{accent-color:var(--orange);width:100%}
+    .modal{position:fixed;inset:0;background:#43312688;display:grid;place-items:center;padding:18px;opacity:0;pointer-events:none;transition:.25s}.modal.show{opacity:1;pointer-events:auto}.sheet{width:min(480px,100%);background:var(--cream);border:5px solid white;border-radius:32px;padding:26px;text-align:center;box-shadow:0 22px 70px #3c251666;transform:translateY(16px) scale(.97);transition:.25s}.show .sheet{transform:none}.sheet h1{margin:0 0 4px;font-size:34px}.score{font-size:68px;font-weight:1000;color:var(--orange);line-height:1}.stars{font-size:30px;letter-spacing:4px;margin:5px}.breakdown{display:grid;gap:7px;text-align:left;margin:18px 0}.breakdown div{display:flex;justify-content:space-between;background:#f3e7d4;padding:9px 13px;border-radius:13px}.comment{min-height:24px;font-weight:700}.again{background:var(--orange);color:white;box-shadow:0 5px 0 #cf6730;width:100%;margin-top:10px}
+    @media(max-width:720px){.top{grid-template-columns:1fr auto}.timer{grid-column:2;grid-row:1}.status{grid-column:1/-1;display:none}.order{padding:10px}.face{font-size:28px;width:43px;height:43px}.order p{font-size:12px}.hint{top:104px}.controls{grid-template-columns:1fr 1.8fr}.controls .panel:first-child{grid-column:1/-1;order:2}.controls .panel:nth-child(2){grid-column:1/-1;order:1}.serve{order:3}.heatpanel{order:3}.panel{padding:7px;border-radius:19px}button{min-height:44px;padding:7px 10px;font-size:13px}}
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div class="top">
+    <div class="card order"><div class="face" id="face">😋</div><div><b id="customer">小桃的點單</b><p id="orderText">七分熟，加鹽和蔥，不要焦喔！</p></div></div>
+    <div class="card timer"><span>剩餘時間</span><strong id="clock">60</strong></div>
+    <div class="card status"><div class="row"><span id="stage">生蛋</span><span id="heatLabel">中火</span></div><div class="bar"><i id="cookBar"></i></div></div>
+  </div>
+  <div class="hint" id="hint">鍋子熱起來了！</div>
+  <div class="controls">
+    <div class="panel heatpanel"><div class="heat"><label><span>🔥 火力</span><span id="heatNum">50%</span></label><input id="heat" type="range" min="0" max="100" value="50"></div></div>
+    <div class="panel"><button id="oil">🫗 放油</button><button id="salt">🧂 鹽巴</button><button id="scallion">🌿 蔥花</button><button id="flip">🍳 翻面</button></div>
+    <button class="serve" id="serve">🔔 上菜</button>
+  </div>
+  <div class="modal" id="modal"><div class="sheet"><div class="face" id="resultFace" style="margin:auto">🤩</div><h1 id="resultTitle">太好吃啦！</h1><div class="score"><span id="score">92</span><small style="font-size:20px">分</small></div><div class="stars" id="stars">★★★★★</div><div class="breakdown"><div><span>火候熟度</span><b id="bCook">40 / 40</b></div><div><span>點單配料</span><b id="bIng">30 / 30</b></div><div><span>翻面與焦度</span><b id="bBurn">20 / 20</b></div><div><span>時間掌握</span><b id="bTime">10 / 10</b></div></div><p class="comment" id="comment"></p><button class="again" id="again">再煎一顆！</button></div></div>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+    const $=s=>document.querySelector(s), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    let scene,camera,renderer,eggWhite,yolk,pan,flame,oilSheen,scallions=[],saltBits=[]; let state={},raf,last;
+    const customers=[['小桃','😋'],['阿福','🤤'],['米米','🥰'],['蛋博士','🧐'],['熊店長','🐻']];
+    const levels=[{n:'三分熟',v:.34},{n:'五分熟',v:.52},{n:'七分熟',v:.72},{n:'全熟',v:.93}];
+    function init3D(){
+      scene=new THREE.Scene();scene.background=new THREE.Color(0xffd98a);scene.fog=new THREE.Fog(0xffd98a,8,18);
+      camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,50);camera.position.set(0,6.1,7.6);camera.lookAt(0,.2,0);
+      renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;$('#game').append(renderer.domElement);
+      scene.add(new THREE.HemisphereLight(0xfff3d4,0x774b39,2.5));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(-4,8,5);sun.castShadow=true;scene.add(sun);
+      const table=new THREE.Mesh(new THREE.CylinderGeometry(7,7,.7,64),new THREE.MeshStandardMaterial({color:0xf3a660,roughness:.8}));table.position.y=-1;table.receiveShadow=true;scene.add(table);
+      pan=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(2.9,2.65,.48,64),new THREE.MeshStandardMaterial({color:0x45474b,roughness:.38,metalness:.25}));body.position.y=-.38;body.receiveShadow=true;body.castShadow=true;pan.add(body);
+      const inner=new THREE.Mesh(new THREE.CylinderGeometry(2.56,2.56,.12,64),new THREE.MeshStandardMaterial({color:0x25282b,roughness:.6}));inner.position.y=-.08;pan.add(inner);
+      const handle=new THREE.Mesh(new THREE.CapsuleGeometry(.27,2.6,8,16),new THREE.MeshStandardMaterial({color:0x5a4a42,roughness:.65}));handle.rotation.z=Math.PI/2;handle.position.set(3.7,-.35,.2);pan.add(handle);scene.add(pan);
+      oilSheen=new THREE.Mesh(new THREE.CircleGeometry(2.15,48),new THREE.MeshStandardMaterial({color:0xffdb62,transparent:true,opacity:0,roughness:.15,metalness:.15}));oilSheen.rotation.x=-Math.PI/2;oilSheen.position.y=.01;scene.add(oilSheen);
+      flame=new THREE.PointLight(0xff6025,0,5);flame.position.set(0,-.7,0);scene.add(flame);makeEgg();
+      addDecor();resize();addEventListener('resize',resize);
+    }
+    function makeEgg(){
+      if(eggWhite)scene.remove(eggWhite,yolk);scallions.forEach(x=>scene.remove(x));saltBits.forEach(x=>scene.remove(x));scallions=[];saltBits=[];
+      const shape=new THREE.Shape();for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,r=2.05*(1+.08*Math.sin(a*5)+.05*Math.sin(a*3));const x=Math.cos(a)*r,z=Math.sin(a)*r*(.79+.05*Math.sin(a*4));i?shape.lineTo(x,z):shape.moveTo(x,z)}
+      eggWhite=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshPhysicalMaterial({color:0xf9f3db,transparent:true,opacity:.18,roughness:.25,transmission:.48,thickness:.15,side:THREE.DoubleSide}));eggWhite.geometry.rotateX(-Math.PI/2);eggWhite.position.y=.1;eggWhite.castShadow=true;scene.add(eggWhite);
+      yolk=new THREE.Mesh(new THREE.SphereGeometry(.72,48,24,0,Math.PI*2,0,Math.PI/2),new THREE.MeshPhysicalMaterial({color:0xffa514,roughness:.2,clearcoat:.6}));yolk.scale.y=.68;yolk.position.set(.12,.13,-.05);yolk.castShadow=true;scene.add(yolk);
+    }
+    function addDecor(){for(let i=0;i<12;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6}));m.position.set((Math.random()-.5)*10,Math.random()*4+1,-3-Math.random()*4);scene.add(m)}}
+    function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+    function newRound(){
+      makeEgg();const c=customers[Math.floor(Math.random()*customers.length)],l=levels[Math.floor(Math.random()*levels.length)];const wants={salt:Math.random()>.35,scallion:Math.random()>.45};
+      state={start:performance.now(),time:60,done:0,sideTime:0,flips:0,burn:0,oil:false,salt:false,scallion:false,served:false,target:l.v,targetName:l.n,wants};
+      $('#customer').textContent=c[0]+'的點單';$('#face').textContent=c[1];$('#orderText').textContent=l.n+'，'+(!wants.salt&&!wants.scallion?'原味就好':(wants.salt?'加鹽':'不要鹽')+'、'+(wants.scallion?'加蔥':'不要蔥'))+'，不要焦喔！';
+      ['oil','salt','scallion'].forEach(id=>{$('#'+id).classList.remove('active');$('#'+id).disabled=false});$('#flip').disabled=false;$('#serve').disabled=false;$('#modal').classList.remove('show');$('#heat').value=50;$('#heatNum').textContent='50%';oilSheen.material.opacity=0;last=performance.now();cancelAnimationFrame(raf);loop(last);toast('客人來囉，開始煎蛋！');
+    }
+    function addTopping(type){const count=type==='scallion'?18:24;for(let i=0;i<count;i++){const g=type==='scallion'?new THREE.CylinderGeometry(.045,.045,.2,8):new THREE.BoxGeometry(.035,.035,.035);const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:type==='scallion'?(i%2?0x4b9b51:0x91ce62):0xffffff}));m.position.set((Math.random()-.5)*2.8,.27+Math.random()*.05,(Math.random()-.5)*2.3);if(type==='scallion'){m.rotation.x=Math.PI/2;m.rotation.z=Math.random()*Math.PI}scene.add(m);(type==='scallion'?scallions:saltBits).push(m)}}
+    function toast(t){const h=$('#hint');h.textContent=t;h.classList.add('show');clearTimeout(h.t);h.t=setTimeout(()=>h.classList.remove('show'),1500)}
+    function loop(now){if(state.served)return;const dt=Math.min((now-last)/1000,.06);last=now;state.time=clamp(60-(now-state.start)/1000,0,60);const heat=+$('#heat').value/100;
+      if(heat>.03){const rate=(.004+.021*heat)*(state.oil?1.05:.92);state.done=clamp(state.done+dt*rate,0,1.18);state.sideTime+=dt*heat; if(state.sideTime>10)state.burn=clamp(state.burn+dt*(state.sideTime-9)*.012*heat,0,1)}
+      updateVisual(heat,now);updateUI(heat);renderer.render(scene,camera);if(state.time<=0){toast('時間到，自動上菜！');finish()}else raf=requestAnimationFrame(loop)}
+    function updateVisual(heat,now){const cooked=clamp(state.done,0,1);eggWhite.material.opacity=.18+cooked*.8;eggWhite.material.transmission=Math.max(0,.5-cooked*.55);eggWhite.material.color.setHSL(.13,clamp(.15+state.burn*.75,0,1),clamp(.94-state.burn*.58,.25,.94));yolk.material.color.setHSL(.1,1,clamp(.55-state.burn*.25,.3,.55));yolk.scale.y=.68-cooked*.22;yolk.position.y=.13+cooked*.02;oilSheen.material.opacity=state.oil?.22:0;flame.intensity=heat*5;flame.color.setHSL(.04+heat*.08,1,.55);pan.position.y=Math.sin(now*.002)*.008;scallions.forEach(x=>x.position.y=.24);}
+    function stage(){if(state.burn>.72)return'焦黑了！';if(state.done<.18)return'透明生蛋';if(state.done<.43)return'三分熟';if(state.done<.62)return'五分熟';if(state.done<.82)return'七分熟';return'全熟'}
+    function updateUI(heat){$('#clock').textContent=Math.ceil(state.time);$('#cookBar').style.width=Math.min(state.done*100,100)+'%';$('#stage').textContent=stage();$('#heatLabel').textContent=heat<.25?'小火':heat<.7?'中火':'大火';$('#heatNum').textContent=Math.round(heat*100)+'%'}
+    function flip(){if(state.served)return;state.flips++;state.sideTime=Math.max(0,state.sideTime*.12);eggWhite.rotation.z+=Math.PI*2;yolk.rotation.z+=Math.PI*2;eggWhite.scale.x*=-1;toast(state.flips===1?'漂亮翻面！':'又翻面啦！');}
+    function finish(){if(state.served)return;state.served=true;cancelAnimationFrame(raf);['oil','salt','scallion','flip','serve'].forEach(id=>$('#'+id).disabled=true);
+      const diff=Math.abs(state.done-state.target);const cook=Math.round(clamp(40-diff*105,0,40));let ing=0;ing+=state.oil?10:3;ing+=(state.salt===state.wants.salt)?10:0;ing+=(state.scallion===state.wants.scallion)?10:0;let burn=Math.round(clamp(20-state.burn*28-(state.flips===0?9:0)-(state.flips>4?4:0),0,20));let timing=Math.round(clamp(10-(Math.max(0,38-state.time)*.12),4,10));const total=clamp(cook+ing+burn+timing,0,100);
+      $('#score').textContent=total;$('#bCook').textContent=cook+' / 40';$('#bIng').textContent=ing+' / 30';$('#bBurn').textContent=burn+' / 20';$('#bTime').textContent=timing+' / 10';const stars=Math.max(1,Math.ceil(total/20));$('#stars').textContent='★'.repeat(stars)+'☆'.repeat(5-stars);
+      let title,face,comment;if(total>=90){title='完美荷包蛋！';face='🤩';comment='熟度和調味都正中紅心，客人想再來一顆！'}else if(total>=75){title='好吃耶！';face='😋';comment=diff>.13?'味道很好，下次再抓準一點熟度！':'很有大廚架勢，再注意翻面就完美了。'}else if(total>=55){title='還可以喔';face='🙂';comment=state.burn>.35?'有一點焦香過頭了，記得早點翻面！':'點單配料要看清楚，火候也要多留心。'}else{title='再試一次！';face='😵';comment=state.burn>.6?'鍋底冒煙啦！降低火力、早點翻面吧。':'這顆蛋還沒抓到客人的胃，再練一局！'}$('#resultTitle').textContent=title;$('#resultFace').textContent=face;$('#comment').textContent=comment;setTimeout(()=>$('#modal').classList.add('show'),500)}
+    $('#heat').addEventListener('input',e=>$('#heatNum').textContent=e.target.value+'%');
+    $('#oil').onclick=()=>{if(!state.oil){state.oil=true;$('#oil').classList.add('active');$('#oil').disabled=true;toast('油亮亮，蛋比較不會黏鍋！')}};
+    $('#salt').onclick=()=>{if(!state.salt){state.salt=true;$('#salt').classList.add('active');$('#salt').disabled=true;addTopping('salt');toast('灑上一小撮鹽')}};
+    $('#scallion').onclick=()=>{if(!state.scallion){state.scallion=true;$('#scallion').classList.add('active');$('#scallion').disabled=true;addTopping('scallion');toast('香噴噴的蔥花！')}};
+    $('#flip').onclick=flip;$('#serve').onclick=finish;$('#again').onclick=newRound;addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();flip()}if(e.key==='Enter')finish()});
+    init3D();newRound();
+  </script>
+</body>
+</html>
